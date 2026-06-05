@@ -1,0 +1,87 @@
+﻿<UserControl x:Class="TaxiApp.Views.Pages.ReviewsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Border Background="#FFFFFF" CornerRadius="12" Padding="30" 
+            BorderBrush="#E0E0E0" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="⭐ Мои отзывы" FontSize="24" FontWeight="Bold" 
+                       Foreground="#212121" Margin="0,0,0,20"/>
+
+            <!-- Форма нового отзыва -->
+            <Border Grid.Row="1" Background="#FFF8E1" CornerRadius="10" Padding="20" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Оставить отзыв о поездке" FontSize="16" FontWeight="SemiBold" 
+                               Foreground="#212121" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Код заказа" Foreground="#424242" Margin="0,0,0,4" FontSize="12"/>
+                    <TextBox x:Name="OrderCodeInput" Padding="10,8" BorderThickness="1" 
+                             BorderBrush="#BDBDBD" Background="#FFFFFF" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Оценка (1-5)" Foreground="#424242" Margin="0,0,0,4" FontSize="12"/>
+                    <ComboBox x:Name="RatingSelect" Padding="10,8" BorderThickness="1" 
+                              BorderBrush="#BDBDBD" Background="#FFFFFF" Margin="0,0,0,10">
+                        <ComboBoxItem Content="⭐⭐⭐⭐⭐ Отлично (5)" IsSelected="True"/>
+                        <ComboBoxItem Content="⭐⭐⭐⭐ Хорошо (4)"/>
+                        <ComboBoxItem Content="⭐⭐⭐ Нормально (3)"/>
+                        <ComboBoxItem Content="⭐⭐ Плохо (2)"/>
+                        <ComboBoxItem Content="⭐ Ужасно (1)"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Комментарий" Foreground="#424242" Margin="0,0,0,4" FontSize="12"/>
+                    <TextBox x:Name="CommentInput" Padding="10,8" BorderThickness="1" 
+                             BorderBrush="#BDBDBD" Background="#FFFFFF" 
+                             Height="80" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,10"/>
+
+                    <Button Content="📤 Отправить отзыв" Click="SubmitReview_Click"
+                            Background="#FFC107" Foreground="#212121" 
+                            FontSize="14" FontWeight="Bold" Padding="0,10" 
+                            BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left" Width="200">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- Список отзывов -->
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="ReviewsList">
+                    <Border Background="#FAFAFA" CornerRadius="8" Padding="15" Margin="0,0,0,10" BorderBrush="#E0E0E0" BorderThickness="1">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock Text="⭐⭐⭐⭐⭐" FontSize="14"/>
+                                <TextBlock Text="  •  Заказ ORD-20260601-1234" Foreground="#757575" FontSize="12"/>
+                                <TextBlock Text="  •  01.06.2026" Foreground="#9E9E9E" FontSize="12" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Text="Отличный водитель, машина чистая, доехали быстро!" 
+                                       TextWrapping="Wrap" Foreground="#424242"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#FAFAFA" CornerRadius="8" Padding="15" Margin="0,0,0,10" BorderBrush="#E0E0E0" BorderThickness="1">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock Text="⭐⭐⭐⭐" FontSize="14"/>
+                                <TextBlock Text="  •  Заказ ORD-20260528-5678" Foreground="#757575" FontSize="12"/>
+                                <TextBlock Text="  •  28.05.2026" Foreground="#9E9E9E" FontSize="12" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Text="Все хорошо, но немного опоздал." 
+                                       TextWrapping="Wrap" Foreground="#424242"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

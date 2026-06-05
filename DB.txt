@@ -1,0 +1,115 @@
+-- ==========================================
+-- Скрипт создания БД для системы такси (MySQL/MariaDB)
+-- Совместимо с phpMyAdmin
+-- ==========================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. Таблица пользователей (аутентификация + роли)
+CREATE TABLE IF NOT EXISTS `users` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `phone` VARCHAR(20) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `role` ENUM('admin', 'driver', 'client') NOT NULL DEFAULT 'client',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_users_phone` (`phone`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. Таблица клиентов
+CREATE TABLE IF NOT EXISTS `clients` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT UNSIGNED UNIQUE,
+    `full_name` VARCHAR(100) NOT NULL,
+    `code` VARCHAR(20) NOT NULL UNIQUE, -- Бизнес-код для API
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Таблица тарифов
+CREATE TABLE IF NOT EXISTS `tariffs` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(50) NOT NULL,
+    `base_price` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (`base_price` >= 0),
+    `price_per_km` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (`price_per_km` >= 0),
+    `min_price` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (`min_price` >= 0),
+    `status` ENUM('active', 'inactive', 'blocked') NOT NULL DEFAULT 'active',
+    `code` VARCHAR(20) NOT NULL UNIQUE,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. Таблица автомобилей
+CREATE TABLE IF NOT EXISTS `cars` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `brand` VARCHAR(50) NOT NULL,
+    `model` VARCHAR(50) NOT NULL,
+    `license_plate` VARCHAR(20) NOT NULL UNIQUE,
+    `production_date` DATE NOT NULL,
+    `code` VARCHAR(20) NOT NULL UNIQUE,
+    `driver_id` BIGINT UNSIGNED DEFAULT NULL, -- Связь с водителем (опционально)
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_cars_driver` (`driver_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. Таблица водителей
+CREATE TABLE IF NOT EXISTS `drivers` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT UNSIGNED UNIQUE,
+    `full_name` VARCHAR(100) NOT NULL,
+    `status` ENUM('active', 'inactive', 'blocked') NOT NULL DEFAULT 'active',
+    `code` VARCHAR(20) NOT NULL UNIQUE,
+    `car_id` BIGINT UNSIGNED DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`car_id`) REFERENCES `cars`(`id`) ON DELETE SET NULL,
+    INDEX `idx_drivers_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Добавляем внешний ключ на водителя в таблице автомобилей (циклическая связь возможна, но безопасна при NULL)
+ALTER TABLE `cars` 
+ADD CONSTRAINT `fk_cars_driver` 
+FOREIGN KEY (`driver_id`) REFERENCES `drivers`(`id`) ON DELETE SET NULL;
+
+-- 6. Таблица заказов
+CREATE TABLE IF NOT EXISTS `orders` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `code` VARCHAR(20) NOT NULL UNIQUE,
+    `client_id` BIGINT UNSIGNED NOT NULL,
+    `driver_id` BIGINT UNSIGNED DEFAULT NULL,
+    `tariff_id` BIGINT UNSIGNED NOT NULL,
+    `pickup_address` TEXT NOT NULL,
+    `destination_address` TEXT NOT NULL,
+    `status` ENUM('pending', 'assigned', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+    `estimated_cost` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (`estimated_cost` >= 0),
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON DELETE RESTRICT,
+    FOREIGN KEY (`driver_id`) REFERENCES `drivers`(`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`tariff_id`) REFERENCES `tariffs`(`id`) ON DELETE RESTRICT,
+    INDEX `idx_orders_client` (`client_id`),
+    INDEX `idx_orders_driver` (`driver_id`),
+    INDEX `idx_orders_status` (`status`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7. Таблица поездок
+CREATE TABLE IF NOT EXISTS `trips` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `order_id` BIGINT UNSIGNED NOT NULL UNIQUE,
+    `distance_km` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (`distance_km` >= 0),
+    `duration_minutes` INT NOT NULL DEFAULT 0 CHECK (`duration_minutes` >= 0),
+    `start_time` DATETIME NOT NULL,
+    `end_time` DATETIME NOT NULL,
+    `price` DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (`price` >= 0),
+    `code` VARCHAR(20) NOT NULL UNIQUE,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+    INDEX `idx_trips_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
