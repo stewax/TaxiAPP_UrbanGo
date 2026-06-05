@@ -18,7 +18,8 @@ public partial class OrderPage : UserControl
     private string _pickupAddress = "";
     private string _destAddress = "";
     private double _basePrice = 150;
-    private double _distance = 0;
+    private double _routeDistance = 0; // Расстояние по дорогам (км)
+    private int _routeDuration = 0;    // Время в минутах
 
     public OrderPage(MainViewModel vm)
     {
@@ -64,7 +65,7 @@ public partial class OrderPage : UserControl
         await GeocodeAddress(DestinationAddress.Text, false);
     }
 
-    // 🌍 Геокодирование адреса (преобразование в координаты)
+    // 🌍 Геокодирование адреса
     private async Task GeocodeAddress(string address, bool isPickup)
     {
         if (string.IsNullOrWhiteSpace(address) || address.Contains("Введите адрес"))
@@ -77,7 +78,6 @@ public partial class OrderPage : UserControl
 
         try
         {
-            // Используем бесплатный API Nominatim (OpenStreetMap)
             var encodedAddress = Uri.EscapeDataString(address);
             var url = $"https://nominatim.openstreetmap.org/search?format=json&q={encodedAddress}&limit=1";
 
@@ -101,7 +101,6 @@ public partial class OrderPage : UserControl
                     PickupAddress.Text = _pickupAddress;
                     PickupCoords.Text = $"Координаты: {lat}, {lon}";
 
-                    // Отправляем на карту
                     MapView.CoreWebView2.PostWebMessageAsString($"pickup:{lat}:{lon}");
                 }
                 else
@@ -112,14 +111,7 @@ public partial class OrderPage : UserControl
                     DestinationAddress.Text = _destAddress;
                     DestinationCoords.Text = $"Координаты: {lat}, {lon}";
 
-                    // Отправляем на карту
                     MapView.CoreWebView2.PostWebMessageAsString($"destination:{lat}:{lon}");
-                }
-
-                // Если обе точки установлены - считаем расстояние
-                if (_pickupLat != null && _destLat != null)
-                {
-                    CalculateDistance();
                 }
             }
             else
@@ -137,42 +129,14 @@ public partial class OrderPage : UserControl
         }
     }
 
-    // 📏 Расчет расстояния между точками (формула Haversine)
-    private void CalculateDistance()
-    {
-        if (_pickupLat == null || _pickupLng == null || _destLat == null || _destLng == null)
-            return;
-
-        var lat1 = double.Parse(_pickupLat.Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
-        var lon1 = double.Parse(_pickupLng.Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
-        var lat2 = double.Parse(_destLat.Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
-        var lon2 = double.Parse(_destLng.Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
-
-        const double R = 6371; // Радиус Земли в км
-
-        var dLat = (lat2 - lat1) * Math.PI / 180;
-        var dLon = (lon2 - lon1) * Math.PI / 180;
-
-        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
-                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-
-        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        _distance = R * c;
-
-        DistanceText.Text = $"Расстояние: {_distance:F1} км";
-
-        // Пересчитываем стоимость
-        UpdateCost();
-    }
-
-    // 💰 Расчет стоимости
+    // 💰 Обновление стоимости (теперь используем расстояние по дорогам)
     private void UpdateCost()
     {
-        if (_distance > 0)
+        if (_routeDistance > 0)
         {
-            var cost = _basePrice + (_distance * 15); // 15 руб/км
+            var cost = _basePrice + (_routeDistance * 15); // 15 руб/км по дорогам
             EstimatedCost.Text = $"{(int)cost} ₽";
+            DistanceText.Text = $"Расстояние: {_routeDistance:F1} км (~{_routeDuration} мин)";
         }
     }
 
@@ -200,7 +164,8 @@ public partial class OrderPage : UserControl
                      $"📍 Подача: {_pickupAddress}\n" +
                      $"🎯 Назначение: {_destAddress}\n" +
                      $"💰 Стоимость: {EstimatedCost.Text}\n" +
-                     $"📏 Расстояние: {_distance:F1} км\n\n" +
+                     $"📏 Расстояние: {_routeDistance:F1} км\n" +
+                     $"⏱ Время: {_routeDuration} мин\n\n" +
                      $"Водитель будет назначен в ближайшее время.";
 
         MessageBox.Show(message, "Заказ принят", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -211,7 +176,8 @@ public partial class OrderPage : UserControl
     {
         _pickupLat = _pickupLng = _destLat = _destLng = null;
         _pickupAddress = _destAddress = "";
-        _distance = 0;
+        _routeDistance = 0;
+        _routeDuration = 0;
 
         PickupAddress.Text = "Введите адрес подачи...";
         DestinationAddress.Text = "Введите адрес назначения...";
@@ -226,6 +192,36 @@ public partial class OrderPage : UserControl
     // 📨 Обработка сообщений от карты
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        // Пока не используем - адреса вводятся вручную
+        try
+        {
+            var json = e.TryGetWebMessageAsString();
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (json.Contains("\"type\":\"route\""))
+                {
+                    // Парсим данные маршрута от OSRM
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("distance", out var distProp))
+                    {
+                        _routeDistance = distProp.GetDouble();
+                    }
+
+                    if (root.TryGetProperty("duration", out var durProp))
+                    {
+                        _routeDuration = durProp.GetInt32();
+                    }
+
+                    // Обновляем стоимость
+                    UpdateCost();
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing web message: {ex.Message}");
+        }
     }
 }
