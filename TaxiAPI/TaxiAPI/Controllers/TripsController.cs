@@ -1,168 +1,109 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TaxiAPI.Data;
-using TaxiAPI.Models;
 
-namespace TaxiAPI.Controllers
+namespace TaxiAPI.Controllers;
+
+[ApiController, Route("api/[controller]")]
+[Authorize]
+public class TripsController : ControllerBase
 {
-    [ApiController, Route("api/[controller]")]
-    [Authorize]
-    public class TripsController : ControllerBase
+    private readonly TaxiDbContext _db;
+
+    public TripsController(TaxiDbContext db) => _db = db;
+
+    // 🔥 Получить все поездки текущего водителя
+    [HttpGet("driver")]
+    [Authorize(Roles = "admin,driver")]
+    public async Task<IActionResult> GetDriverTrips()
     {
-        private readonly TaxiDbContext _db;
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
 
-        public TripsController(TaxiDbContext db) => _db = db;
+        var driver = await _db.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
+        if (driver == null)
+            return NotFound(new { message = "Водитель не найден" });
 
-        // GET: api/trips
-        [HttpGet]
-        [Authorize(Roles = "admin,driver,client")]
-        public async Task<IActionResult> GetAll()
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            IQueryable<Trip> query = _db.Trips
-                .Include(t => t.Order)
-                .ThenInclude(o => o!.Driver)
-                .Include(t => t.Order)
+        var trips = await _db.Trips
+            .Include(t => t.Order)
                 .ThenInclude(o => o!.Client)
-                .AsNoTracking();
+                    .ThenInclude(c => c!.User)
+            .Where(t => t.Order!.DriverId == driver.Id && t.Order.Status == "completed")
+            .OrderByDescending(t => t.EndTime)
+            .ToListAsync();
 
-            if (role == "driver")
-            {
-                query = query.Where(t => t.Order!.DriverId == userId);
-            }
-            else if (role == "client")
-            {
-                query = query.Where(t => t.Order!.ClientId == userId);
-            }
+        var totalIncome = trips.Sum(t => t.Price);
+        var totalDistance = trips.Sum(t => t.DistanceKm);
+        var totalTrips = trips.Count;
 
-            var trips = await query.OrderByDescending(t => t.StartTime).ToListAsync();
-            return Ok(trips);
-        }
-
-        // GET: api/trips/5
-        [HttpGet("{id}")]
-        [Authorize(Roles = "admin,driver,client")]
-        public async Task<IActionResult> GetById(int id)
+        return Ok(new
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            var trip = await _db.Trips
-                .Include(t => t.Order)
-                .ThenInclude(o => o!.Driver)
-                .Include(t => t.Order)
-                .ThenInclude(o => o!.Client)
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            if (trip == null) return NotFound();
-
-            if (role == "driver" && trip.Order!.DriverId != userId)
-                return Forbid();
-
-            if (role == "client" && trip.Order.ClientId != userId)
-                return Forbid();
-
-            return Ok(trip);
-        }
-
-        // POST: api/trips
-        [HttpPost]
-        [Authorize(Roles = "admin,driver")]
-        public async Task<IActionResult> Create([FromBody] TripCreateDto dto)
-        {
-            var order = await _db.Orders.FindAsync(dto.OrderId);
-            if (order == null) return NotFound(new { message = "Заказ не найден" });
-
-            if (order.Status != "completed")
-                return BadRequest(new { message = "Нельзя создать поездку для незавершённого заказа" });
-
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-            if (order.DriverId != userId && User.FindFirst(ClaimTypes.Role)?.Value == "driver")
-                return Forbid();
-
-            if (dto.EndTime <= dto.StartTime)
-                return BadRequest(new { message = "Время завершения должно быть позже времени начала" });
-
-            var trip = new Trip
+            trips = trips.Select(t => new
             {
-                OrderId = dto.OrderId,
-                DistanceKm = dto.DistanceKm,
-                DurationMinutes = dto.DurationMinutes,
-                StartTime = dto.StartTime,
-                EndTime = dto.EndTime,
-                Price = dto.Price,
-                Code = $"TRP-{Guid.NewGuid().ToString()[..6].ToUpper()}",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _db.Trips.Add(trip);
-            await _db.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetById), new { id = trip.Id }, trip);
-        }
-
-        // PUT: api/trips/5
-        [HttpPut("{id}")]
-        [Authorize(Roles = "admin")]
-        public async Task<IActionResult> Update(int id, [FromBody] TripUpdateDto dto)
-        {
-            var trip = await _db.Trips.FindAsync(id);
-            if (trip == null) return NotFound();
-
-            if (dto.DistanceKm.HasValue) trip.DistanceKm = dto.DistanceKm.Value;
-            if (dto.DurationMinutes.HasValue) trip.DurationMinutes = dto.DurationMinutes.Value;
-            if (dto.StartTime.HasValue) trip.StartTime = dto.StartTime.Value;
-            if (dto.EndTime.HasValue)
-            {
-                if (dto.EndTime <= trip.StartTime)
-                    return BadRequest(new { message = "Время завершения должно быть позже времени начала" });
-                trip.EndTime = dto.EndTime.Value;
-            }
-            if (dto.Price.HasValue) trip.Price = dto.Price.Value;
-
-            trip.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-
-            return Ok(trip);
-        }
-
-        // DELETE: api/trips/5
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "admin")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var trip = await _db.Trips.FindAsync(id);
-            if (trip == null) return NotFound();
-
-            _db.Trips.Remove(trip);
-            await _db.SaveChangesAsync();
-
-            return NoContent();
-        }
+                t.Id,
+                t.Code,
+                t.DistanceKm,
+                t.DurationMinutes,
+                t.StartTime,
+                t.EndTime,
+                t.Price,
+                ClientName = t.Order?.Client?.FullName ?? "N/A",
+                PickupAddress = t.Order?.PickupAddress ?? "N/A",
+                DestinationAddress = t.Order?.DestinationAddress ?? "N/A"
+            }),
+            totalIncome,
+            totalDistance,
+            totalTrips
+        });
     }
 
-    public class TripCreateDto
+    // 🔥 Получить поездки за период
+    [HttpGet("driver/period")]
+    [Authorize(Roles = "admin,driver")]
+    public async Task<IActionResult> GetDriverTripsByPeriod([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        [Required] public int OrderId { get; set; }
-        [Required, Range(0, 99999.99)] public decimal DistanceKm { get; set; }
-        [Required, Range(0, int.MaxValue)] public int DurationMinutes { get; set; }
-        [Required] public DateTime StartTime { get; set; }
-        [Required] public DateTime EndTime { get; set; }
-        [Required, Range(0, 999999.99)] public decimal Price { get; set; }
-    }
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
 
-    public class TripUpdateDto
-    {
-        public decimal? DistanceKm { get; set; }
-        public int? DurationMinutes { get; set; }
-        public DateTime? StartTime { get; set; }
-        public DateTime? EndTime { get; set; }
-        public decimal? Price { get; set; }
+        var driver = await _db.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
+        if (driver == null)
+            return NotFound(new { message = "Водитель не найден" });
+
+        var query = _db.Trips
+            .Include(t => t.Order)
+                .ThenInclude(o => o!.Client)
+                    .ThenInclude(c => c!.User)
+            .Where(t => t.Order!.DriverId == driver.Id && t.Order.Status == "completed")
+            .AsQueryable();
+
+        if (from.HasValue)
+            query = query.Where(t => t.EndTime >= from.Value);
+        if (to.HasValue)
+            query = query.Where(t => t.EndTime <= to.Value);
+
+        var trips = await query.OrderByDescending(t => t.EndTime).ToListAsync();
+
+        var totalIncome = trips.Sum(t => t.Price);
+        var totalDistance = trips.Sum(t => t.DistanceKm);
+        var totalTrips = trips.Count;
+
+        return Ok(new
+        {
+            trips = trips.Select(t => new
+            {
+                t.Id,
+                t.Code,
+                t.DistanceKm,
+                t.DurationMinutes,
+                t.StartTime,
+                t.EndTime,
+                t.Price,
+                ClientName = t.Order?.Client?.FullName ?? "N/A",
+                PickupAddress = t.Order?.PickupAddress ?? "N/A",
+                DestinationAddress = t.Order?.DestinationAddress ?? "N/A"
+            }),
+            totalIncome,
+            totalDistance,
+            totalTrips
+        });
     }
 }

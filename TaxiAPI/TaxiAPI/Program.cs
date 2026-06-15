@@ -40,7 +40,15 @@ builder.Services.AddAuthentication(x =>
 builder.Services.AddAuthorization();
 
 // 3. Controllers & Swagger
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Эта опция позволяет сериализовать циклические ссылки
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+
+        // Дополнительно: игнорировать null значения для чистоты JSON
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

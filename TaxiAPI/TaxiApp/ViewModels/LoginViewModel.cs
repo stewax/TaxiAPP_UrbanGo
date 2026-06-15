@@ -6,7 +6,7 @@ using TaxiApp.Views;
 
 namespace TaxiApp.ViewModels;
 
-public partial class LoginViewModel : BaseViewModel
+public partial class LoginViewModel : ObservableObject
 {
     private readonly IAuthService _authService;
 
@@ -28,29 +28,22 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     private bool _isNotLoading = true;
 
+    // 🔥 ВАЖНО: Получаем AuthService через DI
     public LoginViewModel(IAuthService authService)
     {
         _authService = authService;
+        System.Diagnostics.Debug.WriteLine($"✅ LoginViewModel создан с AuthService: {_authService.GetHashCode()}");
     }
 
     [RelayCommand]
     private async Task Login()
     {
-        // Сброс ошибок
         HasError = false;
         ErrorMessage = string.Empty;
 
-        // Валидация
-        if (string.IsNullOrWhiteSpace(Phone))
+        if (string.IsNullOrWhiteSpace(Phone) || string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "Введите номер телефона";
-            HasError = true;
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(Password))
-        {
-            ErrorMessage = "Введите пароль";
+            ErrorMessage = "Введите телефон и пароль";
             HasError = true;
             return;
         }
@@ -62,23 +55,24 @@ public partial class LoginViewModel : BaseViewModel
             return;
         }
 
-        // Показываем индикатор загрузки
         IsLoading = true;
         IsNotLoading = false;
 
         try
         {
+            System.Diagnostics.Debug.WriteLine($"🔐 Попытка входа: {Phone}");
+
             var result = await _authService.LoginAsync(Phone, Password);
 
             if (result != null && result.Success)
             {
-                // Успешный вход - открываем главное окно
+                System.Diagnostics.Debug.WriteLine($"✅ Вход успешен: userId={result.UserId}, role={result.Role}");
+
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     var mainWindow = new MainWindow(result.UserId, result.Role);
                     mainWindow.Show();
 
-                    // Закрываем все окна входа
                     var windowsToClose = new List<Window>();
                     foreach (Window window in Application.Current.Windows)
                     {
@@ -96,13 +90,13 @@ public partial class LoginViewModel : BaseViewModel
             }
             else
             {
-                ErrorMessage = result?.Message ?? "Ошибка входа. Проверьте телефон и пароль.";
+                ErrorMessage = result?.Message ?? "Ошибка входа";
                 HasError = true;
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка подключения к серверу: {ex.Message}";
+            ErrorMessage = $"Ошибка подключения: {ex.Message}";
             HasError = true;
         }
         finally
@@ -115,17 +109,15 @@ public partial class LoginViewModel : BaseViewModel
     [RelayCommand]
     private void Register()
     {
-        // Открываем окно регистрации
         var registerWindow = new RegisterWindow();
         registerWindow.Show();
 
-        // Закрываем окно входа
         var windowsToClose = new List<Window>();
         foreach (Window window in Application.Current.Windows)
         {
-            if (window is LoginWindow loginWindow)
+            if (window is LoginWindow)
             {
-                windowsToClose.Add(loginWindow);
+                windowsToClose.Add(window);
             }
         }
 

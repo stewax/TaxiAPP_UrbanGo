@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Карта с маршрутом</title>
+    <title>Карта с маршрутом (OSRM)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body {
@@ -57,6 +57,16 @@
             color: #FF6F00;
             font-weight: bold;
         }
+
+        .error {
+            color: #D32F2F;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #388E3C;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -80,13 +90,12 @@
         var map = L.map('map').setView([55.7558, 37.6173], 11);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
+            attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
         var pickupMarker = null;
         var destinationMarker = null;
         var routeLine = null;
-        var routeCoordinates = [];
 
         // Получаем сообщения от C#
         window.chrome.webview.addEventListener('message', function (event) {
@@ -125,9 +134,9 @@
                 if (pickupMarker) { map.removeLayer(pickupMarker); pickupMarker = null; }
                 if (destinationMarker) { map.removeLayer(destinationMarker); destinationMarker = null; }
                 if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-                routeCoordinates = [];
                 document.getElementById('routeInfo').style.display = 'none';
-                document.getElementById('status').innerText = 'Введите адреса для построения маршрута';
+                document.getElementById('status').innerHTML = 'Введите адреса для построения маршрута';
+                document.getElementById('status').className = '';
             }
         });
 
@@ -137,56 +146,94 @@
                 return;
             }
 
+            console.log("🔄 Начинаю построение маршрута...");
             document.getElementById('status').innerHTML = '<span class="loading">🔄 Построение маршрута...</span>';
 
             var pickup = pickupMarker.getLatLng();
             var destination = destinationMarker.getLatLng();
 
-            // Используем OSRM для построения маршрута по дорогам
-            var osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+            console.log("📍 Точка подачи:", pickup.lat, pickup.lng);
+            console.log("📍 Точка назначения:", destination.lat, destination.lng);
+
+            if (routeLine) map.removeLayer(routeLine);
+
+            // Используем OSRM для построения маршрута
+            var osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=false`;
+
+            console.log(" Запрос к OSRM:", osrmUrl);
 
             try {
                 var response = await fetch(osrmUrl);
+                console.log(" Ответ получен, статус:", response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 var data = await response.json();
+                console.log("📦 Данные маршрута:", JSON.stringify(data));
 
                 if (data.routes && data.routes.length > 0) {
                     var route = data.routes[0];
-                    var distance = route.distance; // в метрах
-                    var duration = route.duration; // в секундах
+                    var distanceMeters = route.distance;
+                    var durationSeconds = route.duration;
+
+                    console.log("✅ Маршрут построен!");
+                    console.log("📏 Расстояние:", distanceMeters, "м");
+                    console.log("⏱ Время:", durationSeconds, "сек");
 
                     // Рисуем маршрут
-                    if (routeLine) map.removeLayer(routeLine);
-
                     var latlngs = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     routeLine = L.polyline(latlngs, {
-                        color: '#FFC107',
+                        color: '#2196F3',
                         weight: 5,
                         opacity: 0.8,
                         lineCap: 'round',
                         lineJoin: 'round'
                     }).addTo(map);
 
-                    // Показываем информацию
+                    // Показываем информацию на карте
                     document.getElementById('routeInfo').style.display = 'block';
-                    document.getElementById('distance').innerText = (distance / 1000).toFixed(2) + ' км';
-                    document.getElementById('duration').innerText = formatDuration(duration);
-                    document.getElementById('status').innerText = '✅ Маршрут построен';
+                    document.getElementById('distance').innerText = (distanceMeters / 1000).toFixed(2) + ' км';
+                    document.getElementById('duration').innerText = formatDuration(durationSeconds);
+                    document.getElementById('status').innerHTML = '<span class="success">✅ Маршрут построен</span>';
 
-                    // Отправляем данные в C#
-                    window.chrome.webview.postMessage({
+                    // 🔥 ОТПРАВЛЯЕМ ДАННЫЕ В C# (ОБЯЗАТЕЛЬНО ЧЕРЕЗ JSON)
+                    var messageData = {
                         type: 'route',
-                        distance: (distance / 1000).toFixed(2),
-                        duration: Math.round(duration / 60)
-                    });
+                        distance: parseFloat((distanceMeters / 1000).toFixed(2)),
+                        duration: Math.round(durationSeconds / 60)
+                    };
+
+                    console.log("📤 Отправляю в C#:", JSON.stringify(messageData));
+
+                    if (window.chrome && window.chrome.webview) {
+                        window.chrome.webview.postMessage(JSON.stringify(messageData));
+                        console.log("✅ Сообщение отправлено");
+                    } else {
+                        console.error("❌ window.chrome.webview не найден!");
+                    }
 
                     // Показываем весь маршрут
                     map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
                 } else {
-                    document.getElementById('status').innerText = '❌ Маршрут не найден';
+                    console.error("❌ Маршрут не найден в ответе");
+                    document.getElementById('status').innerHTML = '<span class="error">❌ Маршрут не найден</span>';
                 }
             } catch (error) {
-                console.error('Ошибка построения маршрута:', error);
-                document.getElementById('status').innerText = '❌ Ошибка построения маршрута';
+                console.error('❌ Ошибка построения маршрута:', error);
+                document.getElementById('status').innerHTML = '<span class="error">❌ Ошибка: ' + error.message + '</span>';
+            }
+        }
+
+        function formatDuration(seconds) {
+            var minutes = Math.round(seconds / 60);
+            if (minutes < 60) {
+                return minutes + ' мин';
+            } else {
+                var hours = Math.floor(minutes / 60);
+                var mins = minutes % 60;
+                return hours + ' ч ' + (mins > 0 ? mins + ' мин' : '');
             }
         }
 

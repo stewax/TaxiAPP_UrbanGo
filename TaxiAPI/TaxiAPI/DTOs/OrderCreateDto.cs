@@ -1,15 +1,24 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TaxiAPI.DTOs
+namespace TaxiAPI.DTOs;
+
+public class OrderCreateDto
 {
-    public class OrderCreateDto
-    {
-        [Required] public int TariffId { get; set; }
+    [Required(ErrorMessage = "ID клиента обязателен")]
+    public int ClientId { get; set; }
 
-        [Required, MinLength(5, ErrorMessage = "Адрес должен быть не короче 5 символов")]
-        public string PickupAddress { get; set; } = string.Empty;
+    [Required(ErrorMessage = "ID тарифа обязателен")]
+    public int TariffId { get; set; }
 
-        [Required, MinLength(5)]
-        public string DestinationAddress { get; set; } = string.Empty;
-    }
+    [Required(ErrorMessage = "Адрес подачи обязателен")]
+    [MaxLength(255)]
+    public string PickupAddress { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Адрес назначения обязателен")]
+    [MaxLength(255)]
+    public string DestinationAddress { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Стоимость обязательна")]
+    [Range(0, 999999.99)]
+    public decimal EstimatedCost { get; set; }
 }

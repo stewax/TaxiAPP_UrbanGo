@@ -23,5 +23,7 @@ namespace TaxiAPI.Models
 
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
+
+        public Client? Client { get; set; }
     }
 }

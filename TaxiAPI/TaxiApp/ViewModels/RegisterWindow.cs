@@ -6,7 +6,7 @@ using TaxiApp.Views;
 
 namespace TaxiApp.ViewModels;
 
-public partial class RegisterViewModel : BaseViewModel
+public partial class RegisterViewModel : ObservableObject
 {
     private readonly IAuthService _authService;
 
@@ -34,19 +34,19 @@ public partial class RegisterViewModel : BaseViewModel
     [ObservableProperty]
     private bool _isNotLoading = true;
 
+    // 🔥 ВАЖНО: Получаем AuthService через DI
     public RegisterViewModel(IAuthService authService)
     {
         _authService = authService;
+        System.Diagnostics.Debug.WriteLine($"✅ RegisterViewModel создан с AuthService: {_authService.GetHashCode()}");
     }
 
     [RelayCommand]
     private async Task Register()
     {
-        // Сброс ошибок
         HasError = false;
         ErrorMessage = string.Empty;
 
-        // Валидация полей
         if (string.IsNullOrWhiteSpace(FullName))
         {
             ErrorMessage = "Введите ФИО";
@@ -96,7 +96,6 @@ public partial class RegisterViewModel : BaseViewModel
             return;
         }
 
-        // Показываем индикатор загрузки
         IsLoading = true;
         IsNotLoading = false;
 
@@ -109,17 +108,15 @@ public partial class RegisterViewModel : BaseViewModel
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     MessageBox.Show(
-                        "Регистрация успешна! Теперь вы можете войти в систему.",
+                        "Регистрация успешна! Теперь вы можете войти.",
                         "Регистрация завершена",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information
                     );
 
-                    // Открываем окно входа
                     var loginWindow = new LoginWindow();
                     loginWindow.Show();
 
-                    // Закрываем окно регистрации
                     var windowsToClose = new List<Window>();
                     foreach (Window window in Application.Current.Windows)
                     {
@@ -137,13 +134,13 @@ public partial class RegisterViewModel : BaseViewModel
             }
             else
             {
-                ErrorMessage = result?.Message ?? "Ошибка регистрации. Попробуйте другой номер телефона.";
+                ErrorMessage = result?.Message ?? "Ошибка регистрации";
                 HasError = true;
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Ошибка подключения к серверу: {ex.Message}";
+            ErrorMessage = $"Ошибка подключения: {ex.Message}";
             HasError = true;
         }
         finally
@@ -156,11 +153,9 @@ public partial class RegisterViewModel : BaseViewModel
     [RelayCommand]
     private void Login()
     {
-        // Возвращаемся на окно входа
         var loginWindow = new LoginWindow();
         loginWindow.Show();
 
-        // Закрываем окно регистрации
         var windowsToClose = new List<Window>();
         foreach (Window window in Application.Current.Windows)
         {

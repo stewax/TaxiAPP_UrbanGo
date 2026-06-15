@@ -19,19 +19,19 @@ public partial class App : Application
 
     private void ConfigureServices(ServiceCollection services)
     {
-        // Сервисы
-        services.AddSingleton<IAuthService, AuthService>();
-        services.AddSingleton<IApiService, ApiService>();
-
         // HttpClient
         services.AddHttpClient();
 
-        // ViewModels
+        // 🔥 ВАЖНО: Singleton для AuthService и ApiService
+        services.AddSingleton<IAuthService, AuthService>();
+        services.AddSingleton<IApiService, ApiService>();
+
+        // ViewModels (Transient - создаются каждый раз)
         services.AddTransient<LoginViewModel>();
         services.AddTransient<RegisterViewModel>();
         services.AddTransient<MainViewModel>();
 
-        // Views
+        // Views (Singleton)
         services.AddSingleton<LoginWindow>();
         services.AddSingleton<RegisterWindow>();
     }
@@ -40,7 +40,6 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Показываем окно входа
         var loginWindow = Services.GetRequiredService<LoginWindow>();
         loginWindow.Show();
     }

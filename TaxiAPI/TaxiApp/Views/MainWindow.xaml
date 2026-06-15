@@ -1,12 +1,16 @@
 ﻿<Window x:Class="TaxiApp.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="UrbanGo Регистрация" Height="450" Width="800"
-        WindowStartupLocation="CenterScreen">
+        xmlns:vm="clr-namespace:TaxiApp.ViewModels"
+        Title="TaxiApp" 
+        Height="700" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- Стиль кнопок меню -->
+        <!-- Стили кнопок меню -->
         <Style x:Key="MenuButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#424242"/>
@@ -79,30 +83,56 @@
                 <Border Grid.Row="0" Background="#FFC107" Padding="20,0">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="🚖 TaxiApp" FontSize="22" FontWeight="Bold" Foreground="#212121"/>
-                        <TextBlock Text="Клиент" FontSize="12" Foreground="#424242"/>
+                        <TextBlock Text="{Binding CurrentUserRole, StringFormat='Роль: {0}'}" 
+                                   FontSize="12" Foreground="#424242"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Меню -->
-                <StackPanel Grid.Row="1" Margin="0,20,0,0">
-                    <Button Content=" Создать заказ" 
-                            Style="{StaticResource MenuButton}"
-                            Command="{Binding NavigateCommand}" CommandParameter="Order"/>
+                <!-- 🔥 МЕНЮ С ФИЛЬТРАЦИЕЙ ПО РОЛЯМ -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,20,0,0">
 
-                    <Button Content="📋 История поездок" 
-                            Style="{StaticResource MenuButton}"
-                            Command="{Binding NavigateCommand}" CommandParameter="History"/>
+                        <!-- ОБЩИЙ ПУНКТ -->
+                        <Button Content="👤 Профиль" 
+                                Style="{StaticResource MenuButton}"
+                                Command="{Binding NavigateCommand}" CommandParameter="Profile"/>
 
-                    <Button Content="👤 Профиль" 
-                            Style="{StaticResource MenuButton}"
-                            Command="{Binding NavigateCommand}" CommandParameter="Profile"/>
+                        <!-- ТОЛЬКО ДЛЯ КЛИЕНТА -->
+                        <Button Content="🗺 Создать заказ" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsClient, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="Order"/>
 
-                    <Button Content="⭐ Мои отзывы" 
-                            Style="{StaticResource MenuButton}"
-                            Command="{Binding NavigateCommand}" CommandParameter="Reviews"/>
-                </StackPanel>
+                        <Button Content="📋 История поездок" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsClient, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="History"/>
 
-                <!-- Выход -->
+                        <Button Content="⭐ Мои отзывы" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsClient, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="Reviews"/>
+
+                        <!-- ТОЛЬКО ДЛЯ ВОДИТЕЛЯ -->
+                        <Button Content="📋 Взять заказ" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsDriver, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="DriverOrders"/>
+
+                        <Button Content="🚗 Активный заказ" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsDriver, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="DriverActiveOrder"/>
+
+                        <Button Content="💰 Доход" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsDriver, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="DriverEarnings"/>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Кнопка выхода -->
                 <Border Grid.Row="2" Padding="20" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
                     <Button Content="🚪 Выйти" 
                             Style="{StaticResource PrimaryButton}"

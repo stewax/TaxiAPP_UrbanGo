@@ -16,7 +16,7 @@
                 <TextBlock Text="Все ваши завершенные поездки" FontSize="14" 
                            Foreground="#757575" Margin="0,5,0,0"/>
             </StackPanel>
-
+            
             <DataGrid Grid.Row="1" x:Name="TripsGrid" AutoGenerateColumns="False" 
                       IsReadOnly="True" CanUserAddRows="False" 
                       AlternatingRowBackground="#FAFAFA" 

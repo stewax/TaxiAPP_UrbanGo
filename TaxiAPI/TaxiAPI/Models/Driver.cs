@@ -14,6 +14,7 @@ namespace TaxiAPI.Models
         public int UserId { get; set; }
 
         [ForeignKey("UserId")]
+        [InverseProperty("Driver")]
         public User? User { get; set; }
 
         [Required, Column("full_name"), MaxLength(100)]
@@ -37,6 +38,7 @@ namespace TaxiAPI.Models
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
 
+        [InverseProperty("Driver")]
         public ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }

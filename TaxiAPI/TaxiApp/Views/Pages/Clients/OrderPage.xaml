@@ -84,12 +84,15 @@
 
                     <!-- Тариф -->
                     <TextBlock Text="Тариф" Foreground="#424242" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                    <ComboBox x:Name="TariffSelect" Padding="12,10" BorderThickness="1" 
-                              BorderBrush="#BDBDBD" Background="#FFFFFF" Margin="0,0,0,15"
-                              SelectionChanged="TariffSelect_SelectionChanged">
-                        <ComboBoxItem Content="Эконом — от 150₽" IsSelected="True" Tag="150"/>
-                        <ComboBoxItem Content="Комфорт — от 250₽" Tag="250"/>
-                        <ComboBoxItem Content="Бизнес — от 500₽" Tag="500"/>
+                    <ComboBox x:Name="TariffSelect" 
+          Padding="12,10" 
+          BorderThickness="1" 
+          BorderBrush="#BDBDBD" 
+          Background="#FFFFFF" 
+          Margin="0,0,0,15"
+          SelectionChanged="TariffSelect_SelectionChanged"
+          DisplayMemberPath="Name">
+                        <!-- Элементы будут добавлены из API -->
                     </ComboBox>
 
                     <!-- Расчет стоимости -->

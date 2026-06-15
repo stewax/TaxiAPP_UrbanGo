@@ -1,0 +1,107 @@
+﻿<UserControl x:Class="TaxiApp.Views.Pages.Drivers.DriverActiveOrderPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="400"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Панель заказа -->
+        <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="12" Padding="25" 
+                BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,15,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="🚖 Активный заказ" FontSize="22" FontWeight="Bold" 
+                               Foreground="#212121" Margin="0,0,0,20"/>
+
+                    <!-- Информация о заказе -->
+                    <Border Background="#FFF8E1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock x:Name="OrderCode" Text="Код: -" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="OrderStatus" Text="Статус: -" FontSize="12" Foreground="#757575" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Клиент -->
+                    <TextBlock Text="👤 Клиент" Foreground="#424242" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                    <Border Background="#F5F5F5" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock x:Name="ClientName" Text="Имя: -" FontSize="14"/>
+                            <TextBlock x:Name="ClientPhone" Text="Телефон: -" FontSize="12" Foreground="#757575" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Адреса -->
+                    <TextBlock Text="📍 Точка подачи" Foreground="#424242" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                    <TextBox x:Name="PickupAddress" IsReadOnly="True" Background="#F5F5F5" 
+                             Padding="12,10" BorderThickness="1" BorderBrush="#BDBDBD" 
+                             Margin="0,0,0,15"/>
+
+                    <TextBlock Text="🎯 Точка назначения" Foreground="#424242" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                    <TextBox x:Name="DestinationAddress" IsReadOnly="True" Background="#F5F5F5" 
+                             Padding="12,10" BorderThickness="1" BorderBrush="#BDBDBD" 
+                             Margin="0,0,0,15"/>
+
+                    <!-- Стоимость -->
+                    <Border Background="#E8F5E9" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock Text="💰 Стоимость:" FontSize="12" Foreground="#757575"/>
+                            <TextBlock x:Name="EstimatedCost" Text="0 ₽" FontSize="24" 
+                                       FontWeight="Bold" Foreground="#2E7D32"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Кнопки управления -->
+                    <Button x:Name="StartTripButton" Content="▶️ Начать поездку" Click="StartTrip_Click"
+                            Background="#4CAF50" Foreground="White" 
+                            FontSize="16" FontWeight="Bold" Padding="0,15" 
+                            BorderThickness="0" Cursor="Hand" Margin="0,0,0,10"
+                            Visibility="Visible">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <Button x:Name="CompleteTripButton" Content="✅ Завершить поездку" Click="CompleteTrip_Click"
+                            Background="#FF5722" Foreground="White" 
+                            FontSize="16" FontWeight="Bold" Padding="0,15" 
+                            BorderThickness="0" Cursor="Hand" Margin="0,0,0,10"
+                            Visibility="Collapsed">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <Button Content="← Назад к заказам" Click="Back_Click"
+                            Background="#F5F5F5" Foreground="#424242" 
+                            FontSize="14" Padding="0,10" BorderThickness="0" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Карта -->
+        <Border Grid.Column="1" Background="#FFFFFF" CornerRadius="12" 
+                BorderBrush="#E0E0E0" BorderThickness="1" ClipToBounds="True">
+            <wv2:WebView2 x:Name="MapView" />
+        </Border>
+    </Grid>
+</UserControl>

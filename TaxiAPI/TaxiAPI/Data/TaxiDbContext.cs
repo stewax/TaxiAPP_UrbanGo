@@ -20,7 +20,19 @@ namespace TaxiAPI.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Связи
+            // 🔥 Явно указываем связи
+            modelBuilder.Entity<Client>()
+                .HasOne(c => c.User)
+                .WithOne(u => u.Client)
+                .HasForeignKey<Client>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Driver>()
+                .HasOne(d => d.User)
+                .WithOne(u => u.Driver)
+                .HasForeignKey<Driver>(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Client)
                 .WithMany(c => c.Orders)

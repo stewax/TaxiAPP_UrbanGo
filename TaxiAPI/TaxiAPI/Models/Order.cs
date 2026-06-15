@@ -17,12 +17,14 @@ namespace TaxiAPI.Models
         public int ClientId { get; set; }
 
         [ForeignKey("ClientId")]
+        [InverseProperty("Orders")]
         public Client? Client { get; set; }
 
         [Column("driver_id")]
         public int? DriverId { get; set; }
 
         [ForeignKey("DriverId")]
+        [InverseProperty("Orders")]
         public Driver? Driver { get; set; }
 
         [Required, Column("tariff_id")]
