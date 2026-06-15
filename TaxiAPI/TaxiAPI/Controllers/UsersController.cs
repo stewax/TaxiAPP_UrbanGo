@@ -105,25 +105,39 @@ public class UsersController : ControllerBase
     /// [ADMIN] Получить список всех пользователей с их ролями
     /// URL: GET /api/users/all
     /// </summary>
-    [HttpGet("all")]
+    [HttpGet]
     [Authorize(Roles = "admin")]
-    public async Task<IActionResult> GetAllUsers()
+    public async Task<IActionResult> GetAll()
     {
-        var users = await _db.Users
-            .Include(u => u.Client) // Подгружаем клиента, если есть
-            .Select(u => new
-            {
-                u.Id,
-                u.Phone,
-                u.Role,
-                u.CreatedAt,
-                FullName = u.Client != null ? u.Client.FullName : null,
-                ClientId = u.Client != null ? u.Client.Id : (int?)null
-            })
-            .OrderByDescending(u => u.CreatedAt)
-            .ToListAsync();
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("[API] Запрос списка пользователей...");
 
-        return Ok(users);
+            var users = await _db.Users
+                .Include(u => u.Client)
+                .Include(u => u.Driver)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Phone,
+                    u.Role,
+                    u.CreatedAt,
+                    ClientName = u.Client != null ? u.Client.FullName : null,
+                    ClientCode = u.Client != null ? u.Client.Code : null,
+                    DriverName = u.Driver != null ? u.Driver.FullName : null,
+                    DriverStatus = u.Driver != null ? u.Driver.Status : null
+                })
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync();
+
+            System.Diagnostics.Debug.WriteLine($"[API] Найдено {users.Count} пользователей");
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API] Ошибка: {ex.Message}");
+            return StatusCode(500, new { message = $"Ошибка сервера: {ex.Message}" });
+        }
     }
 
     /// <summary>

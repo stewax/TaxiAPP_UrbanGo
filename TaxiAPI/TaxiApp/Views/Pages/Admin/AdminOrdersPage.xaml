@@ -1,0 +1,174 @@
+﻿<UserControl x:Class="TaxiApp.Views.Pages.Admin.AdminOrdersPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <Border Grid.Row="0" Background="#FFFFFF" CornerRadius="12" Padding="25" 
+                BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="📋 Управление заказами" FontSize="26" FontWeight="Bold" Foreground="#212121"/>
+                    <TextBlock Text="Просмотр всех заказов в системе" FontSize="14" Foreground="#757575" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="🔄 Обновить" Click="Refresh_Click"
+                        Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold" 
+                        Padding="20,10" BorderThickness="0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Фильтр по статусу -->
+        <Border Grid.Row="1" Background="#FFFFFF" CornerRadius="12" Padding="20" 
+                BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="🔍 Фильтр по статусу:" FontSize="14" FontWeight="SemiBold" 
+                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <ComboBox x:Name="StatusFilter" 
+                            Width="200" 
+                            Padding="10,8" 
+                            SelectionChanged="StatusFilter_Changed">
+                    <ComboBoxItem Content="Все заказы" IsSelected="True"/>
+                    <ComboBoxItem Content="pending"/>
+                    <ComboBoxItem Content="assigned"/>
+                    <ComboBoxItem Content="in_progress"/>
+                    <ComboBoxItem Content="completed"/>
+                    <ComboBoxItem Content="cancelled"/>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <!-- Таблица заказов -->
+        <Border Grid.Row="2" Background="#FFFFFF" CornerRadius="12" Padding="20" 
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <DataGrid x:Name="OrdersGrid" AutoGenerateColumns="False" IsReadOnly="True" 
+          CanUserAddRows="False" AlternatingRowBackground="#FAFAFA" 
+          HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#FFF8E1"/>
+                        <Setter Property="Foreground" Value="#212121"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="12,10"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Код" Binding="{Binding Code}" Width="*"/>
+                    <DataGridTextColumn Header="Клиент" Binding="{Binding ClientName}" Width="1.5*"/>
+                    <DataGridTextColumn Header="Водитель" Binding="{Binding DriverName}" Width="1.5*"/>
+                    <DataGridTextColumn Header="Откуда" Binding="{Binding PickupAddress}" Width="2*"/>
+                    <DataGridTextColumn Header="Куда" Binding="{Binding DestinationAddress}" Width="2*"/>
+                    <DataGridTextColumn Header="Стоимость" Binding="{Binding EstimatedCost, StringFormat={}{0} ₽}" Width="*"/>
+                    <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*"/>
+                    <DataGridTextColumn Header="Дата" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm}" Width="1.3*"/>
+
+                    <!-- 🔥 НОВОЕ: Колонка с кнопками управления -->
+                    <DataGridTemplateColumn Header="Действия" Width="2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                    <!-- Просмотр деталей -->
+                                    <Button Content="👁️" 
+                                Click="ViewOrder_Click" 
+                                Tag="{Binding Id}"
+                                Background="#2196F3" 
+                                Foreground="White" 
+                                Padding="8,4" 
+                                Margin="0,0,5,0"
+                                BorderThickness="0" 
+                                Cursor="Hand"
+                                ToolTip="Просмотр деталей">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <!--  НОВОЕ: Назначить водителя (только для pending) -->
+                                    <Button x:Name="AssignDriverButton"
+                                                Content="🚗" 
+                                                Click="AssignDriver_Click" 
+                                                Tag="{Binding Id}"
+                                                Background="#9C27B0" 
+                                                Foreground="White" 
+                                                Padding="8,4" 
+                                                Margin="0,0,3,0"
+                                                BorderThickness="0" 
+                                                Cursor="Hand"
+                                                ToolTip="Назначить водителя">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <!-- Изменить статус -->
+                                    <Button Content="🔄" 
+                                Click="ChangeStatus_Click" 
+                                Tag="{Binding Id}"
+                                Background="#FFC107" 
+                                Foreground="#212121" 
+                                Padding="8,4" 
+                                Margin="0,0,5,0"
+                                BorderThickness="0" 
+                                Cursor="Hand"
+                                ToolTip="Изменить статус">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+
+                                    <!-- Удалить заказ -->
+                                    <Button Content="🗑️" 
+                                Click="DeleteOrder_Click" 
+                                Tag="{Binding Id}"
+                                Background="#F44336" 
+                                Foreground="White" 
+                                Padding="8,4"
+                                BorderThickness="0" 
+                                Cursor="Hand"
+                                ToolTip="Удалить заказ">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>

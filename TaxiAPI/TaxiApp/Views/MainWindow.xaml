@@ -128,6 +128,26 @@
                                 Style="{StaticResource MenuButton}"
                                 Visibility="{Binding IsDriver, Converter={StaticResource BoolToVis}}"
                                 Command="{Binding NavigateCommand}" CommandParameter="DriverEarnings"/>
+                        <!-- ТОЛЬКО ДЛЯ Админа -->
+                        <Button Content="💵 Тарифы" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="AdminTariffs"/>
+
+                        <Button Content="👥 Пользователи" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="AdminUsers"/>
+
+                        <Button Content="📋 Заказы" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="AdminOrders"/>
+
+                        <Button Content="🚗 Поездки" 
+                                Style="{StaticResource MenuButton}"
+                                Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding NavigateCommand}" CommandParameter="AdminTrips"/>
 
                     </StackPanel>
                 </ScrollViewer>

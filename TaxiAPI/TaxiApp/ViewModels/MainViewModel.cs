@@ -6,6 +6,7 @@ using System.Windows.Input;
 using TaxiApp.Services;
 using TaxiApp.Views;
 using TaxiApp.Views.Pages;
+using TaxiApp.Views.Pages.Admin;
 using TaxiApp.Views.Pages.Drivers;
 
 namespace TaxiApp.ViewModels;
@@ -92,6 +93,11 @@ public class MainViewModel : INotifyPropertyChanged
             "DriverOrders" => new DriverOrdersPage(this),
             "DriverActiveOrder" => new DriverActiveOrderPage(this, orderId ?? 0),
             "DriverEarnings" => new DriverEarningsPage(this),
+            // 🔥 НОВОЕ: Админ-страницы
+            "AdminTariffs" => new AdminTariffsPage(this),
+            "AdminUsers" => new AdminUsersPage(this),
+            "AdminOrders" => new AdminOrdersPage(this),
+            "AdminTrips" => new AdminTripsPage(this),
             _ => new OrderPage(this)
         };
     }

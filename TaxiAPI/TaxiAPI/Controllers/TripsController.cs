@@ -106,4 +106,39 @@ public class TripsController : ControllerBase
             totalTrips
         });
     }
+    [HttpGet]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> GetAllTrips()
+    {
+        var trips = await _db.Trips
+            .Include(t => t.Order)
+                .ThenInclude(o => o!.Client)
+                    .ThenInclude(c => c!.User)
+            .Include(t => t.Order)
+                .ThenInclude(o => o!.Driver)
+                    .ThenInclude(d => d!.User)
+            .OrderByDescending(t => t.EndTime)
+            .ToListAsync();
+
+        var totalIncome = trips.Sum(t => t.Price);
+        var totalTrips = trips.Count;
+
+        return Ok(new
+        {
+            trips = trips.Select(t => new
+            {
+                t.Id,
+                t.Code,
+                t.DistanceKm,
+                t.DurationMinutes,
+                t.StartTime,
+                t.EndTime,
+                t.Price,
+                ClientName = t.Order?.Client?.FullName ?? "N/A",
+                DriverName = t.Order?.Driver?.FullName ?? "N/A"
+            }),
+            totalIncome,
+            totalTrips
+        });
+    }
 }

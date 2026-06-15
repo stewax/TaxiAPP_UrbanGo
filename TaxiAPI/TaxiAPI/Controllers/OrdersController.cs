@@ -260,24 +260,140 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Обновление статуса заказа (например, когда водитель принял заказ)
     /// </summary>
-    [HttpPut("{id}/status")]
-    [Authorize(Roles = "admin,driver")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] string newStatus)
+
+    // 🔥 Назначение водителя на заказ (для админа)
+    [HttpPut("{id}/assign-driver")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> AssignDriver(int id, [FromBody] AssignDriverDto dto)
     {
         var order = await _db.Orders.FindAsync(id);
-        if (order == null) return NotFound();
+        if (order == null)
+            return NotFound(new { message = "Заказ не найден" });
 
-        // Разрешенные статусы
-        var allowedStatuses = new[] { "pending", "assigned", "in_progress", "completed", "cancelled" };
-        if (!allowedStatuses.Contains(newStatus))
-            return BadRequest(new { message = "Недопустимый статус" });
+        if (order.Status != "pending")
+            return BadRequest(new { message = "Можно назначить водителя только на заказ со статусом 'pending'" });
 
-        order.Status = newStatus;
+        var driver = await _db.Drivers.FindAsync(dto.DriverId);
+        if (driver == null)
+            return NotFound(new { message = "Водитель не найден" });
+
+        if (driver.Status != "active")
+            return BadRequest(new { message = "Водитель не активен" });
+
+        order.DriverId = driver.Id;
+        order.Status = "assigned";
         order.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 
-        return Ok(order);
+        return Ok(new { message = "Водитель назначен", orderId = order.Id, driverId = driver.Id });
+    }
+
+    // 🔥 Получить список активных водителей (для админа)
+    [HttpGet("available-drivers")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> GetAvailableDrivers()
+    {
+        var drivers = await _db.Drivers
+            .Include(d => d.User)
+            .Where(d => d.Status == "active")
+            .Select(d => new
+            {
+                d.Id,
+                FullName = d.FullName,
+                Phone = d.User != null ? d.User.Phone : "N/A",
+                d.Code,
+                d.Status
+            })
+            .ToListAsync();
+
+        return Ok(drivers);
+    }
+
+    public class AssignDriverDto
+    {
+        public int DriverId { get; set; }
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> GetAll()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("[API] Запрос всех заказов...");
+
+            var orders = await _db.Orders
+                .Include(o => o.Client)
+                    .ThenInclude(c => c!.User)
+                .Include(o => o.Driver)
+                    .ThenInclude(d => d!.User)
+                .Include(o => o.Tariff)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.Code,
+                    o.ClientId,
+                    ClientName = o.Client != null ? o.Client.FullName : "N/A",
+                    o.DriverId,
+                    DriverName = o.Driver != null ? o.Driver.FullName : null,
+                    o.PickupAddress,
+                    o.DestinationAddress,
+                    o.Status,
+                    o.EstimatedCost,
+                    o.CreatedAt
+                })
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+
+            System.Diagnostics.Debug.WriteLine($"[API] Найдено {orders.Count} заказов");
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[API] Ошибка: {ex.Message}");
+            return StatusCode(500, new { message = $"Ошибка сервера: {ex.Message}" });
+        }
+    }
+
+    // 🔥 Изменение статуса заказа (для админа)
+    [HttpPut("{id}/status")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> ChangeStatus(int id, [FromBody] ChangeStatusDto dto)
+    {
+        var order = await _db.Orders.FindAsync(id);
+        if (order == null)
+            return NotFound(new { message = "Заказ не найден" });
+
+        var allowedStatuses = new[] { "pending", "assigned", "in_progress", "completed", "cancelled" };
+        if (!allowedStatuses.Contains(dto.Status))
+            return BadRequest(new { message = "Недопустимый статус" });
+
+        order.Status = dto.Status;
+        order.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Статус изменен", newStatus = order.Status });
+    }
+
+    // 🔥 Удаление заказа (для админа)
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var order = await _db.Orders.FindAsync(id);
+        if (order == null)
+            return NotFound(new { message = "Заказ не найден" });
+
+        _db.Orders.Remove(order);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Заказ удален" });
+    }
+
+    public class ChangeStatusDto
+    {
+        public string Status { get; set; } = string.Empty;
     }
     public class CompleteOrderDto
     {

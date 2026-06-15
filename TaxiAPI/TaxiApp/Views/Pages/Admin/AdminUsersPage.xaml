@@ -1,0 +1,105 @@
+﻿<UserControl x:Class="TaxiApp.Views.Pages.Admin.AdminUsersPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <Border Grid.Row="0" Background="#FFFFFF" CornerRadius="12" Padding="25" 
+                BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="👥 Управление пользователями" FontSize="26" FontWeight="Bold" Foreground="#212121"/>
+                    <TextBlock Text="Просмотр, смена роли и удаление пользователей" FontSize="14" Foreground="#757575" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="🔄 Обновить" Click="Refresh_Click"
+                        Background="#4CAF50" Foreground="White" FontSize="14" FontWeight="Bold" 
+                        Padding="20,10" BorderThickness="0" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Таблица пользователей -->
+        <Border Grid.Row="1" Background="#FFFFFF" CornerRadius="12" Padding="20" 
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <DataGrid x:Name="UsersGrid" AutoGenerateColumns="False" IsReadOnly="True" 
+                      CanUserAddRows="False" AlternatingRowBackground="#FAFAFA" 
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#FFF8E1"/>
+                        <Setter Property="Foreground" Value="#212121"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="12,10"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="*"/>
+                    <DataGridTextColumn Header="Телефон" Binding="{Binding Phone}" Width="1.5*"/>
+                    <DataGridTextColumn Header="Роль" Binding="{Binding Role}" Width="*"/>
+                    <DataGridTextColumn Header="Имя клиента" Binding="{Binding ClientName}" Width="2*"/>
+                    <DataGridTextColumn Header="Имя водителя" Binding="{Binding DriverName}" Width="2*"/>
+                    <DataGridTextColumn Header="Регистрация" Binding="{Binding CreatedAt, StringFormat=dd.MM.yyyy HH:mm}" Width="1.5*"/>
+                    <DataGridTemplateColumn Header="Действия" Width="2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="👁️" Click="ViewUser_Click" Tag="{Binding Id}"
+                                            Background="#2196F3" Foreground="White" Padding="8,4" Margin="0,0,5,0"
+                                            BorderThickness="0" Cursor="Hand" ToolTip="Просмотр">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button Content="🔄" Click="ChangeRole_Click" Tag="{Binding Id}"
+                                            Background="#FFC107" Foreground="#212121" Padding="8,4" Margin="0,0,5,0"
+                                            BorderThickness="0" Cursor="Hand" ToolTip="Сменить роль">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button Content="🗑️" Click="DeleteUser_Click" Tag="{Binding Id}"
+                                            Background="#F44336" Foreground="White" Padding="8,4"
+                                            BorderThickness="0" Cursor="Hand" ToolTip="Удалить">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>
