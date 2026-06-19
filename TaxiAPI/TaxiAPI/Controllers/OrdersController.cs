@@ -128,8 +128,20 @@ public class OrdersController : ControllerBase
         order.Status = "completed";
         order.EstimatedCost = dto.FinalCost;
         order.UpdatedAt = DateTime.UtcNow;
+        System.Diagnostics.Debug.WriteLine("========== COMPLETE TRIP ==========");
+        System.Diagnostics.Debug.WriteLine($"Получен FinalCost: {dto.FinalCost}");
+        System.Diagnostics.Debug.WriteLine($"Тип FinalCost: {dto.FinalCost.GetType()}");
+        System.Diagnostics.Debug.WriteLine($"FinalCost * 100: {dto.FinalCost * 100}");
+        System.Diagnostics.Debug.WriteLine($"FinalCost / 100: {dto.FinalCost / 100}");
 
-        // Создаем запись о поездке
+        // Проверяем, не пришли ли копейки
+        if (dto.FinalCost > 10000)
+        {
+            System.Diagnostics.Debug.WriteLine($"⚠️ FinalCost={dto.FinalCost} - похоже на КОПЕЙКИ!");
+            System.Diagnostics.Debug.WriteLine($"💰 В рублях: {dto.FinalCost / 100}");
+        }
+
+        // Создаем Trip
         var trip = new Trip
         {
             OrderId = order.Id,
@@ -137,13 +149,19 @@ public class OrdersController : ControllerBase
             DurationMinutes = dto.DurationMinutes,
             StartTime = dto.StartTime,
             EndTime = dto.EndTime,
-            Price = dto.FinalCost,
+            Price = dto.FinalCost, // ← ПРОВЕРЬТЕ ЭТО МЕСТО
             Code = $"TRP-{Guid.NewGuid().ToString()[..6].ToUpper()}",
             CreatedAt = DateTime.UtcNow
         };
 
+        System.Diagnostics.Debug.WriteLine($"Сохраняем Price: {trip.Price}");
+
         _db.Trips.Add(trip);
         await _db.SaveChangesAsync();
+
+        // Проверяем, что сохранилось
+        var savedTrip = await _db.Trips.AsNoTracking().FirstOrDefaultAsync(t => t.Id == trip.Id);
+        System.Diagnostics.Debug.WriteLine($"Сохраненный Price: {savedTrip?.Price}");
 
         return Ok(new { message = "Поездка завершена", orderId = order.Id, tripId = trip.Id });
     }
@@ -176,6 +194,13 @@ public class OrdersController : ControllerBase
     [Authorize(Roles = "client")]
     public async Task<IActionResult> CreateOrder([FromBody] OrderCreateDto dto)
     {
+        System.Diagnostics.Debug.WriteLine("========== СЕРВЕР: CREATE ORDER ==========");
+        System.Diagnostics.Debug.WriteLine($"Получен dto.EstimatedCost: {dto.EstimatedCost}");
+        System.Diagnostics.Debug.WriteLine($"Тип: {dto.EstimatedCost.GetType()}");
+
+        // Проверяем сырой JSON (если доступен)
+        var rawJson = await Request.BodyReader.ReadAsync();
+        System.Diagnostics.Debug.WriteLine($"Сырой JSON: {rawJson}");
         // 🔥 ИЗМЕНЕНИЕ: Ищем клиента по UserId (который приходит из WPF), а не по ClientId
         var client = await _db.Clients.FirstOrDefaultAsync(c => c.UserId == dto.ClientId);
 

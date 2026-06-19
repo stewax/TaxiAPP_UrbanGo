@@ -132,38 +132,57 @@ namespace TaxiApp.Services
         {
             try
             {
-                await AddAuthHeader(); // Обязательно добавляем токен!
+                await AddAuthHeader();
+
+                // 🔥 ДИАГНОСТИКА ПЕРЕД СЕРИАЛИЗАЦИЕЙ
+                System.Diagnostics.Debug.WriteLine("========== API SERVICE: CREATE ORDER ==========");
+                System.Diagnostics.Debug.WriteLine($"DTO.EstimatedCost: {dto.EstimatedCost}");
+                System.Diagnostics.Debug.WriteLine($"DTO.EstimatedCost тип: {dto.EstimatedCost.GetType()}");
+                System.Diagnostics.Debug.WriteLine($"DTO.EstimatedCost * 100: {dto.EstimatedCost * 100}");
+                System.Diagnostics.Debug.WriteLine($"DTO.EstimatedCost / 100: {dto.EstimatedCost / 100}");
 
                 var json = JsonSerializer.Serialize(dto);
+                System.Diagnostics.Debug.WriteLine($"📤 JSON для отправки: {json}");
+
+                // Проверяем, что в JSON правильное число
+                if (json.Contains("\"estimatedCost\":69100"))
+                {
+                    System.Diagnostics.Debug.WriteLine("❌ ОШИБКА: В JSON 69100 вместо 691!");
+                    System.Diagnostics.Debug.WriteLine("❌ ПРОБЛЕМА В СЕРИАЛИЗАЦИИ НА КЛИЕНТЕ!");
+                }
+                else if (json.Contains("\"estimatedCost\":691"))
+                {
+                    System.Diagnostics.Debug.WriteLine("✅ В JSON правильная цена: 691");
+                }
+
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await _httpClient.PostAsync("orders", content);
 
                 System.Diagnostics.Debug.WriteLine($"📥 Ответ сервера: {response.StatusCode}");
-                System.Diagnostics.Debug.WriteLine($"📄 Тело ответа: {await response.Content.ReadAsStringAsync()}");
+                var responseBody = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"📄 Тело ответа: {responseBody}");
 
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                // Проверяем, что вернул сервер
+                if (response.IsSuccessStatusCode)
                 {
-                    _authService.ClearToken();
-                    throw new UnauthorizedAccessException("Токен истек");
+                    var result = JsonSerializer.Deserialize<Order>(responseBody, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    System.Diagnostics.Debug.WriteLine($"✅ Заказ создан с ценой: {result?.EstimatedCost}");
+
+                    // Если сервер вернул 69100 - проблема на сервере
+                    if (result?.EstimatedCost == 69100)
+                    {
+                        System.Diagnostics.Debug.WriteLine("⚠️ Сервер вернул 69100! Проблема на сервере!");
+                    }
+
+                    return result;
                 }
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorBody = await response.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"❌ Ошибка API ({response.StatusCode}): {errorBody}");
-                    return null;
-                }
-
-                var resultJson = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<Order>(resultJson, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw; // Пробрасываем дальше
+                return null;
             }
             catch (Exception ex)
             {

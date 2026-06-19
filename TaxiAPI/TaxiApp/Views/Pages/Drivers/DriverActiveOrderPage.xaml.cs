@@ -375,6 +375,12 @@ public partial class DriverActiveOrderPage : UserControl
                     }
                 }
 
+                if (finalCost > 10000)
+                {
+                    System.Diagnostics.Debug.WriteLine($"⚠️ Исправляем цену: {finalCost} → {finalCost / 100}");
+                    finalCost = finalCost / 100;
+                }
+
                 var distance = 10.5;
                 if (!string.IsNullOrEmpty(_pickupLat) && !string.IsNullOrEmpty(_destLat))
                 {
